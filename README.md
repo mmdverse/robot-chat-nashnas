@@ -58,7 +58,7 @@
 
 ```bash
 # Clone
-git clone https://github.com/mamadiezad/persian-anonymous-chat-bot.git
+git clone https://github.com/mmdverse/robot-chat-nashnas.git
 cd persian-anonymous-chat-bot
 
 # Install
@@ -133,6 +133,6 @@ src/
 ---
 
 <p align="center">
-  <sub>Built with ❤️ by <a href="https://github.com/mamadiezad">Mohammad</a></sub>
+  <sub>Built with ❤️ by <a href="https://github.com/mmdverse">Mohammad</a></sub>
 </p>
-<p align="center">ساخته شده با ❤️ توسط <a href="https://github.com/mamadiezad">Mohammad</a> | <a href="https://t.me/llllxyz">📱 تلگرام</a></p>
+<p align="center">ساخته شده با ❤️ توسط <a href="https://github.com/mmdverse">Mohammad</a> | <a href="https://t.me/llllxyz">📱 تلگرام</a></p>
