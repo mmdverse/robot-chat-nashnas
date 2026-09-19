@@ -22,7 +22,8 @@
 | 📨 **Referral System** | Invite friends and earn bonuses |
 | ❤️ **Like System** | Like chat partners |
 | 🔇 **Block & Report** | Block a user, or report them for harassment, spam, a fake profile or inappropriate content |
-| 👥 **Liked Users** | Review the profiles you liked during chats |
+| 👥 **Connections** | Users who liked you back — message them directly |
+| ✉️ **Direct Messages** | Chat with a past partner after you both liked each other |
 
 ### ⚙️ Admin Panel
 | Feature | Description |
@@ -34,23 +35,12 @@
 | 🚨 **Report System** | List open reports and resolve them with `/resolve` |
 | 📢 **Campaigns** | List campaigns with their send, view and entry counts |
 | 🚫 **Ban / Unban** | Ban or unban a user with `/ban` and `/unban` |
+| 📈 **Activity Charts** | Hourly and daily chat charts, last 24 hours and 14 days |
+| ⚡ **Smart Alerts** | Admins are warned when a user passes the report threshold |
+| 💳 **Purchase Requests** | Review coin purchases with `/requests`, `/approve` and `/reject` |
+| 🔒 **Required Channels** | Membership in `REQUIRED_CHANNELS` is enforced before use |
+| 📝 **Text Management** | Rewrite the fixed bot messages with `/texts` and `/edit` |
 | ⚙️ **Settings** | Overview of the bot settings |
-
-### 🚧 Not implemented yet
-
-Listed here so nobody plans around them — these are read from config or mentioned
-in older docs, but no code path uses them:
-
-- **Buying coins** — the packages and prices exist, but there is no payment
-  integration, so the buy button only lists them.
-- **Direct messages to past partners** — you cannot message someone after a chat
-  ends; the button shows your liked users instead.
-- **Required channels** — `REQUIRED_CHANNELS` is read from the environment but no
-  join-check middleware runs.
-- **Analytics charts** — the hourly and daily aggregation helpers exist but
-  nothing calls them; statistics are shown as text.
-- **Redis** — `ioredis` is installed and `REDIS_URL` is read, but nothing imports
-  it. MongoDB is the only store in use.
 
 ---
 
@@ -63,6 +53,7 @@ in older docs, but no code path uses them:
 | **grammY** | Telegram Bot Framework |
 | **MongoDB** | Database |
 | **Mongoose** | MongoDB ODM |
+| **Redis** | Session storage when `REDIS_URL` is set (optional) |
 
 ---
 
@@ -121,7 +112,7 @@ src/
 | `🔍 جستجوی پیشرفته` | Advanced search |
 | `📡 رادار افراد نزدیک` | Find nearby users |
 | `👤 پروفایل من` | View/edit profile |
-| `💰 کیف پول` | Check wallet |
+| `💰 کیف پول` | Wallet, transaction history and coin packages |
 | `📨 دعوت از دوستان` | Get referral link |
 | `❓ راهنما` | Help & support |
 
@@ -137,6 +128,9 @@ src/
 | `⚙️ تنظیمات` | Bot settings |
 | `/ban` · `/unban` | Ban or unban a user by id |
 | `/resolve <id>` | Close a report |
+| `/requests` | List pending coin purchases |
+| `/approve <id>` · `/reject <id>` | Accept or refuse a coin purchase |
+| `/texts` · `/edit <key>` · `/resettext <key>` | Manage the editable bot messages |
 
 ---
 
