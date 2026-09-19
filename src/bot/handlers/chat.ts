@@ -7,10 +7,11 @@ import { Report } from '../../database/models/Report';
 import { chatKeyboard, endChatKeyboard, reportReasonKeyboard } from '../utils/keyboards';
 import { t } from '../utils/i18n';
 import { escapeHtml } from '../utils/html';
+import { SearchFilters } from '../utils/filters';
 import { config } from '../../config';
 
 // ===== Start Random Chat =====
-export async function startChatHandler(ctx: MyContext) {
+export async function startChatHandler(ctx: MyContext, filters?: SearchFilters) {
   const telegramId = ctx.from?.id!;
   const user = await UserService.getById(telegramId);
   if (!user) return;
@@ -34,7 +35,7 @@ export async function startChatHandler(ctx: MyContext) {
   await ctx.reply(t.findingPartner, { parse_mode: 'HTML' });
 
   // Try to find a partner
-  const partner = await UserService.searchForPartner(telegramId);
+  const partner = await UserService.searchForPartner(telegramId, filters);
   if (partner) {
     let chat;
     try {
@@ -78,8 +79,16 @@ export async function startChatHandler(ctx: MyContext) {
       const stillWaiting = await User.findOne({ telegramId, chatStatus: 'waiting' });
       if (stillWaiting) {
         await User.updateOne({ telegramId }, { chatStatus: 'idle' });
+
+        // جستجوی پیشرفته پول گرفته ولی هم‌صحبتی پیدا نشد ⇒ هزینه برمی‌گردد
+        let refundNote = '';
+        if (filters) {
+          await UserService.addCoins(telegramId, config.coins.advancedSearchCost, 'بازگشت هزینهٔ جستجوی پیشرفته');
+          refundNote = `\n\n💰 هزینهٔ ${config.coins.advancedSearchCost} سکه‌ای جستجوی پیشرفته برگشت داده شد.`;
+        }
+
         try {
-          const msg = await ctx.reply(t.noChatPartner, { parse_mode: 'HTML' });
+          const msg = await ctx.reply(t.noChatPartner + refundNote, { parse_mode: 'HTML' });
           setTimeout(() => ctx.deleteMessages([msg.message_id]), 5000);
         } catch {}
       }
