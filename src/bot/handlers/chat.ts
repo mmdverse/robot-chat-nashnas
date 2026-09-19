@@ -194,9 +194,29 @@ export async function chatMessageHandler(ctx: MyContext) {
   }
 }
 
-// ===== Direct Message =====
-export async function directMessageHandler(ctx: MyContext) {
-  // This would be triggered from a user's liked users list
-  // For now, it's a placeholder
-  await ctx.reply('📨 برای ارسال پیام دایرکت، از لیست کاربرانی که لایک کردید انتخاب کنید.');
+// ===== Liked Users =====
+// دکمهٔ «پیام دایرکت» هیچ هندلری نداشت و زدنش هیچ واکنشی نمی‌داد. تا وقتی
+// پیام‌دهی به چت‌های قبلی ساخته نشده، همان لیستِ لایک‌شده‌ها نشان داده می‌شود.
+export async function likedUsersHandler(ctx: MyContext) {
+  const telegramId = ctx.from?.id!;
+  const user = await UserService.getById(telegramId);
+  if (!user) return;
+
+  const likedIds = (user.likedUsers || []).slice(-10);
+  if (likedIds.length === 0) {
+    await ctx.reply(t.likedUsersEmpty);
+    return;
+  }
+
+  const liked = await User.find({ telegramId: { $in: likedIds } })
+    .select('profile.name profile.age profile.province')
+    .lean();
+
+  const lines = liked.map((u, index) =>
+    `${index + 1}. ${escapeHtml(u.profile?.name || 'ناشناس')} • ${u.profile?.age || '?'} ساله • ${escapeHtml(u.profile?.province || 'نامشخص')}`
+  );
+
+  await ctx.reply(`${t.likedUsersTitle(liked.length)}\n\n${lines.join('\n')}\n\n${t.likedUsersNote}`, {
+    parse_mode: 'HTML',
+  });
 }

@@ -3,7 +3,7 @@ import { config } from '../config';
 import { connectDatabase } from '../database/connection';
 import { startHandler } from './handlers/start';
 import { profileHandler, editProfileHandler, profileStates } from './handlers/profile';
-import { startChatHandler, endChatHandler, confirmEndChat, nextChatHandler, likeUserHandler, reportUserHandler, blockUserHandler, chatMessageHandler } from './handlers/chat';
+import { startChatHandler, endChatHandler, confirmEndChat, nextChatHandler, likeUserHandler, reportUserHandler, blockUserHandler, chatMessageHandler, likedUsersHandler } from './handlers/chat';
 import { adminStatsHandler, adminBroadcastHandler, sendBroadcast, adminTargetedBroadcastHandler, sendTargetedBroadcast, adminManageCoinsHandler, manageCoins, adminReportsHandler, adminBanUser, adminUnbanUser, adminCampaignHandler, adminSettingsHandler } from './handlers/admin';
 import { mainKeyboard, adminKeyboard } from './utils/keyboards';
 import { t } from './utils/i18n';
@@ -160,6 +160,7 @@ export async function startBot() {
     await ctx.answerCallbackQuery();
   });
   bot.callbackQuery('block_user', blockUserHandler);
+  bot.callbackQuery('liked_users', likedUsersHandler);
   bot.callbackQuery('confirm_report', async (ctx) => {
     await ctx.reply('🚨 لطفاً دلیل گزارش را انتخاب کنید.');
     await ctx.answerCallbackQuery();
