@@ -74,6 +74,7 @@ export interface IReport {
   createdAt: Date;
   resolved: boolean;
   resolvedBy?: number;
+  alertedAt?: Date;
 }
 
 export interface ITransaction {

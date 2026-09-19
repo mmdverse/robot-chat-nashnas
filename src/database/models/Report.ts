@@ -10,6 +10,8 @@ const ReportSchema = new Schema<IReport>({
   createdAt: { type: Date, default: Date.now },
   resolved: { type: Boolean, default: false },
   resolvedBy: { type: Number },
+  // زمان هشدار به ادمین‌ها؛ تا هر گزارش فقط یک‌بار هشدار بدهد
+  alertedAt: { type: Date },
 });
 
 ReportSchema.index({ reportedId: 1, resolved: 1 });

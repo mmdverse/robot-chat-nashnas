@@ -19,6 +19,8 @@ import { Chat } from '../database/models/Chat';
 import { Report } from '../database/models/Report';
 import { AdminLog } from '../database/models/AdminLog';
 import chalk from 'chalk';
+import cron from 'node-cron';
+import { AlertService } from '../database/services/alertService';
 
 
 export async function startBot() {
@@ -360,6 +362,32 @@ export async function startBot() {
   bot.catch((err) => {
     console.error(chalk.red('❌ Bot error:'), err);
   });
+
+  // ===== ALERTS =====
+  // node-cron نصب بود و هیچ‌جا استفاده نمی‌شد. این اسکن هر ۱۰ دقیقه یک‌بار
+  // کاربرانی را که گزارش بازشان به آستانه رسیده به ادمین‌ها اطلاع می‌دهد.
+  // خود اسکن و علامت‌گذاری در AlertService انجام می‌شود تا هر گزارش یک‌بار
+  // هشدار بدهد، حتی اگر ربات چند نمونه اجرا شود.
+  if (config.admins.length > 0) {
+    cron.schedule('*/10 * * * *', async () => {
+      try {
+        const alerts = await AlertService.findRepeatOffenders();
+        if (alerts.length === 0) return;
+
+        const lines = alerts.map((a) => t.repeatOffenderLine(a.name, a.reportedId, a.count));
+        for (const adminId of config.admins) {
+          try {
+            await bot.api.sendMessage(adminId, t.repeatOffenderAlert(lines), { parse_mode: 'HTML' });
+          } catch {
+            // ادمینی که ربات را بلاک کرده
+          }
+        }
+      } catch (error) {
+        console.error(chalk.red('❌ Alert scan failed:'), error);
+      }
+    });
+    console.log(chalk.gray('⏱️  Alert scan scheduled (every 10 minutes)'));
+  }
 
   await bot.start({
     drop_pending_updates: true,
