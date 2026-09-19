@@ -13,7 +13,8 @@ export function mainKeyboard() {
 
 export function adminKeyboard() {
   return new Keyboard()
-    .text(t.stats).text(t.broadcast).row()
+    .text(t.stats).text(t.analytics).row()
+    .text(t.broadcast).row()
     .text(t.targetedBroadcast).text(t.manageCoins).row()
     .text(t.reports).text(t.campaigns).row()
     .text(t.settings).text(t.logout).row()

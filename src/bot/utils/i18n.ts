@@ -55,6 +55,14 @@ ${!name || !gender || !age || !province ? '⚠️ لطفاً پروفایل خو
 • تکمیل پروفایل: +۳۰ سکه
 • چت روزانه: +۵ سکه`,
 
+  // Analytics
+  analytics: '📈 نمودار فعالیت',
+  analyticsHourly: (rows: string[], max: number) =>
+    `📈 چت‌های ۲۴ ساعت گذشته (به وقت تهران)\n\n${rows.join('\n')}`,
+  analyticsDaily: (rows: string[], total: number) =>
+    `📅 چت‌های ۱۴ روز گذشته (مجموع: ${total})\n\n${rows.join('\n')}`,
+  analyticsEmpty: '📈 هنوز چتی ثبت نشده است.',
+
   // Required channels
   joinRequiredChannels: (channels: string) =>
     `🔒 برای استفاده از ربات، اول عضو کانال‌های زیر شوید:\n\n${channels}\n\nبعد از عضویت دکمهٔ «✅ عضو شدم» را بزنید.`,
