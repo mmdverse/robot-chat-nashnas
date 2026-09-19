@@ -1,10 +1,10 @@
-import { Context } from 'grammy';
+import { MyContext } from '../../types/context';
 import { UserService } from '../../database/services/userService';
 import { mainKeyboard, adminKeyboard } from '../utils/keyboards';
 import { t } from '../utils/i18n';
 import { config } from '../../config';
 
-export async function startHandler(ctx: Context) {
+export async function startHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   const username = ctx.from?.username;
   const firstName = ctx.from?.first_name;

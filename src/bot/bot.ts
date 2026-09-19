@@ -1,4 +1,4 @@
-import { Bot, session, Context, SessionFlavor } from 'grammy';
+import { Bot, session } from 'grammy';
 import { config } from '../config';
 import { connectDatabase } from '../database/connection';
 import { startHandler } from './handlers/start';
@@ -8,21 +8,13 @@ import { adminStatsHandler, adminBroadcastHandler, sendBroadcast, adminTargetedB
 import { mainKeyboard, adminKeyboard } from './utils/keyboards';
 import { t } from './utils/i18n';
 import { UserService } from '../database/services/userService';
+import { MyContext, SessionData } from '../types/context';
 import { User } from '../database/models/User';
 import { Chat } from '../database/models/Chat';
 import { Report } from '../database/models/Report';
 import { AdminLog } from '../database/models/AdminLog';
 import chalk from 'chalk';
 
-interface SessionData {
-  awaitingProfileInput: string | null;
-  awaitingBroadcastMessage: boolean;
-  awaitingTargetedBroadcast: boolean;
-  awaitingCoinManagement: boolean;
-  awaitingAdvancedSearch: boolean;
-}
-
-type MyContext = Context & SessionFlavor<SessionData>;
 
 export async function startBot() {
   await connectDatabase();
@@ -67,7 +59,7 @@ export async function startBot() {
     if (!user || !user.profile.isComplete) { await ctx.reply(t.profileIncomplete); return; }
     if (user.coins < config.coins.advancedSearchCost) { await ctx.reply(t.notEnoughCoins(config.coins.advancedSearchCost)); return; }
     await UserService.spendCoins(user.telegramId, config.coins.advancedSearchCost, 'جستجوی پیشرفته');
-    (ctx.session as any).awaitingAdvancedSearch = true;
+    ctx.session.awaitingAdvancedSearch = true;
     await ctx.reply('🔍 جستجوی پیشرفته (هزینه: ۱۰ سکه)\n\nلطفاً فیلترها را وارد کنید:\n`gender=male, minAge=18, maxAge=30, province=تهران`');
   });
 

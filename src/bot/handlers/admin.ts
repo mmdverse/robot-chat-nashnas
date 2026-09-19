@@ -1,4 +1,4 @@
-import { Context } from 'grammy';
+import { MyContext } from '../../types/context';
 import { UserService } from '../../database/services/userService';
 import { ChatService } from '../../database/services/chatService';
 import { Report } from '../../database/models/Report';
@@ -10,7 +10,7 @@ import { t } from '../utils/i18n';
 import { config } from '../../config';
 
 // ===== Stats =====
-export async function adminStatsHandler(ctx: Context) {
+export async function adminStatsHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   if (!config.admins.includes(telegramId)) return;
 
@@ -29,14 +29,14 @@ export async function adminStatsHandler(ctx: Context) {
 }
 
 // ===== Broadcast =====
-export async function adminBroadcastHandler(ctx: Context) {
+export async function adminBroadcastHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   if (!config.admins.includes(telegramId)) return;
-  (ctx.session as any).awaitingBroadcastMessage = true;
+  ctx.session.awaitingBroadcastMessage = true;
   await ctx.reply('📣 لطفاً پیام خود را ارسال کنید:\n\n⚠️ این پیام برای همه کاربران ارسال خواهد شد.');
 }
 
-export async function sendBroadcast(ctx: Context, messageText: string) {
+export async function sendBroadcast(ctx: MyContext, messageText: string) {
   const telegramId = ctx.from?.id!;
   const users = await User.find({ status: 'active' });
   let sent = 0;
@@ -58,10 +58,10 @@ export async function sendBroadcast(ctx: Context, messageText: string) {
 }
 
 // ===== Targeted Broadcast =====
-export async function adminTargetedBroadcastHandler(ctx: Context) {
+export async function adminTargetedBroadcastHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   if (!config.admins.includes(telegramId)) return;
-  (ctx.session as any).awaitingTargetedBroadcast = true;
+  ctx.session.awaitingTargetedBroadcast = true;
   await ctx.reply(
     '🎯 ارسال هدفمند\n\n' +
     'لطفاً فیلترها را به این فرمت وارد کنید:\n' +
@@ -70,7 +70,7 @@ export async function adminTargetedBroadcastHandler(ctx: Context) {
   );
 }
 
-export async function sendTargetedBroadcast(ctx: Context, filterText: string) {
+export async function sendTargetedBroadcast(ctx: MyContext, filterText: string) {
   const telegramId = ctx.from?.id!;
   if (!config.admins.includes(telegramId)) return;
 
@@ -109,14 +109,14 @@ export async function sendTargetedBroadcast(ctx: Context, filterText: string) {
 }
 
 // ===== Coin Management =====
-export async function adminManageCoinsHandler(ctx: Context) {
+export async function adminManageCoinsHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   if (!config.admins.includes(telegramId)) return;
-  (ctx.session as any).awaitingCoinManagement = true;
+  ctx.session.awaitingCoinManagement = true;
   await ctx.reply('💰 مدیریت سکه\n\nفرمت: `userId amount reason`\nمثال: `123456789 50 برای فعالیت خوب`');
 }
 
-export async function manageCoins(ctx: Context, text: string) {
+export async function manageCoins(ctx: MyContext, text: string) {
   const telegramId = ctx.from?.id!;
   if (!config.admins.includes(telegramId)) return;
 
@@ -145,7 +145,7 @@ export async function manageCoins(ctx: Context, text: string) {
 }
 
 // ===== Reports =====
-export async function adminReportsHandler(ctx: Context) {
+export async function adminReportsHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   if (!config.admins.includes(telegramId)) return;
 
@@ -171,7 +171,7 @@ export async function adminReportsHandler(ctx: Context) {
   await ctx.reply(msg);
 }
 
-export async function adminBanUser(ctx: Context) {
+export async function adminBanUser(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   if (!config.admins.includes(telegramId)) return;
 
@@ -192,7 +192,7 @@ export async function adminBanUser(ctx: Context) {
   await AdminLog.create({ adminId: telegramId, action: 'ban', targetId: userId });
 }
 
-export async function adminUnbanUser(ctx: Context) {
+export async function adminUnbanUser(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   if (!config.admins.includes(telegramId)) return;
 
@@ -214,7 +214,7 @@ export async function adminUnbanUser(ctx: Context) {
 }
 
 // ===== Campaigns =====
-export async function adminCampaignHandler(ctx: Context) {
+export async function adminCampaignHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   if (!config.admins.includes(telegramId)) return;
 
@@ -236,7 +236,7 @@ export async function adminCampaignHandler(ctx: Context) {
 }
 
 // ===== Settings =====
-export async function adminSettingsHandler(ctx: Context) {
+export async function adminSettingsHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   if (!config.admins.includes(telegramId)) return;
 
