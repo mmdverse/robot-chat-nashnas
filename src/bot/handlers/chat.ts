@@ -1,4 +1,4 @@
-import { Context } from 'grammy';
+import { MyContext } from '../../types/context';
 import { UserService } from '../../database/services/userService';
 import { ChatService } from '../../database/services/chatService';
 import { User } from '../../database/models/User';
@@ -9,7 +9,7 @@ import { t } from '../utils/i18n';
 import { config } from '../../config';
 
 // ===== Start Random Chat =====
-export async function startChatHandler(ctx: Context) {
+export async function startChatHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   const user = await UserService.getById(telegramId);
   if (!user) return;
@@ -67,7 +67,7 @@ export async function startChatHandler(ctx: Context) {
 }
 
 // ===== End Chat =====
-export async function endChatHandler(ctx: Context) {
+export async function endChatHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   const chat = await ChatService.getActiveChat(telegramId);
   if (!chat) {
@@ -77,7 +77,7 @@ export async function endChatHandler(ctx: Context) {
   await ctx.reply('آیا مطمئن هستید؟', { reply_markup: endChatKeyboard() });
 }
 
-export async function confirmEndChat(ctx: Context) {
+export async function confirmEndChat(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   const chat = await ChatService.getActiveChat(telegramId);
   if (!chat) return;
@@ -94,13 +94,13 @@ export async function confirmEndChat(ctx: Context) {
   }
 }
 
-export async function nextChatHandler(ctx: Context) {
+export async function nextChatHandler(ctx: MyContext) {
   await confirmEndChat(ctx);
   setTimeout(() => startChatHandler(ctx), 500);
 }
 
 // ===== Like =====
-export async function likeUserHandler(ctx: Context) {
+export async function likeUserHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   const chat = await ChatService.getActiveChat(telegramId);
   if (!chat) {
@@ -112,7 +112,7 @@ export async function likeUserHandler(ctx: Context) {
 }
 
 // ===== Report =====
-export async function reportUserHandler(ctx: Context) {
+export async function reportUserHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   const chat = await ChatService.getActiveChat(telegramId);
   if (!chat) {
@@ -126,7 +126,7 @@ export async function reportUserHandler(ctx: Context) {
 }
 
 // ===== Block =====
-export async function blockUserHandler(ctx: Context) {
+export async function blockUserHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   const chat = await ChatService.getActiveChat(telegramId);
   if (!chat) {
@@ -142,7 +142,7 @@ export async function blockUserHandler(ctx: Context) {
 }
 
 // ===== Forward Chat Messages =====
-export async function chatMessageHandler(ctx: Context) {
+export async function chatMessageHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
   const chat = await ChatService.getActiveChat(telegramId);
   if (!chat) return;
@@ -163,7 +163,7 @@ export async function chatMessageHandler(ctx: Context) {
 }
 
 // ===== Direct Message =====
-export async function directMessageHandler(ctx: Context) {
+export async function directMessageHandler(ctx: MyContext) {
   // This would be triggered from a user's liked users list
   // For now, it's a placeholder
   await ctx.reply('📨 برای ارسال پیام دایرکت، از لیست کاربرانی که لایک کردید انتخاب کنید.');
