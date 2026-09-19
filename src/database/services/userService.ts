@@ -175,6 +175,7 @@ export class UserService {
       status: 'active',
       chatStatus: 'waiting',
       isOnline: true,
+      // کسی که ما را بلاک کرده هم کاندید نمی‌شود
       blockedUsers: { $ne: userId },
     };
 
@@ -190,7 +191,15 @@ export class UserService {
     }
     if (filters?.province) query['profile.province'] = filters.province;
 
-    return User.findOne(query).sort({ lastSeen: -1 });
+    // رزرو اتمیک: کاندید در همان کوئری از صف برداشته و به این کاربر نسبت داده
+    // می‌شود. قبلاً اول find می‌زدیم و بعد در createChat وضعیت را عوض می‌کردیم؛
+    // در آن فاصله دو کاربر می‌توانستند یک نفر را بردارند و برای یک نفر دو چت
+    // فعال ساخته شود.
+    return User.findOneAndUpdate(
+      query,
+      { chatStatus: 'chatting', currentPartner: userId },
+      { new: true, sort: { lastSeen: -1 } }
+    );
   }
 
   static async toggleBan(telegramId: number, ban: boolean): Promise<void> {

@@ -20,6 +20,15 @@ export async function startChatHandler(ctx: MyContext) {
     return;
   }
 
+  // اگر همین حالا در چت فعالی هستیم، چت دوم ساخته نمی‌شود
+  const existingChat = await ChatService.getActiveChat(telegramId);
+  if (existingChat) {
+    await ctx.reply('⚠️ شما در حال حاضر در یک چت فعال هستید. اول آن را ببندید.', {
+      reply_markup: chatKeyboard(),
+    });
+    return;
+  }
+
   // Set user as waiting
   await User.updateOne({ telegramId }, { chatStatus: 'waiting', isOnline: true });
   await ctx.reply(t.findingPartner, { parse_mode: 'HTML' });
@@ -27,7 +36,18 @@ export async function startChatHandler(ctx: MyContext) {
   // Try to find a partner
   const partner = await UserService.searchForPartner(telegramId);
   if (partner) {
-    const chat = await ChatService.createChat(telegramId, partner.telegramId);
+    let chat;
+    try {
+      chat = await ChatService.createChat(telegramId, partner.telegramId);
+    } catch (error) {
+      // رزرو را برمی‌گردانیم تا هم‌صحبتی که پیدا شده برای نفر بعدی در صف بماند
+      await User.updateOne(
+        { telegramId: partner.telegramId },
+        { chatStatus: 'waiting', currentPartner: null }
+      );
+      await ctx.reply('❌ خطا در ایجاد چت. لطفاً دوباره تلاش کنید.');
+      return;
+    }
 
     await ctx.reply(
       t.partnerFound(
