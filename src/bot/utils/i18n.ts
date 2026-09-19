@@ -55,6 +55,25 @@ ${!name || !gender || !age || !province ? '⚠️ لطفاً پروفایل خو
 • تکمیل پروفایل: +۳۰ سکه
 • چت روزانه: +۵ سکه`,
 
+  // Wallet — history and packages
+  transactionHistoryEmpty: '📊 هنوز تراکنشی ثبت نشده است.',
+  walletHistory: (rows: string[], balance: number) =>
+    `📊 آخرین تراکنش‌های شما\n\n💰 موجودی فعلی: ${balance} سکه\n\n${rows.join('\n\n')}`,
+  transactionLine: (type: string, amount: number, description: string, date: string) => {
+    const labels: Record<string, string> = {
+      earn: '🪙 دریافت',
+      spend: '💸 خرج',
+      purchase: '💳 خرید',
+      bonus: '🎁 پاداش',
+      referral: '📨 زیرمجموعه',
+      admin: '⚙️ ادمین',
+    };
+    const sign = amount > 0 ? '+' : '';
+    return `${labels[type] || type}  ${sign}${amount} سکه\n   ${escapeHtml(description)} · ${date}`;
+  },
+  buyCoinsUnavailable: (rows: string[]) =>
+    `💳 بسته‌های سکه\n\n${rows.join('\n')}\n\n⚠️ خرید آنلاین هنوز فعال نشده است؛ برای تهیهٔ سکه به پشتیبانی پیام دهید.`,
+
   // Referral
   referralInfo: (link: string, count: number) =>
     `📨 دعوت از دوستان

@@ -6,11 +6,13 @@ import { startHandler } from './handlers/start';
 import { profileHandler, editProfileHandler, profileStates } from './handlers/profile';
 import { startChatHandler, endChatHandler, confirmEndChat, nextChatHandler, likeUserHandler, reportUserHandler, blockUserHandler, chatMessageHandler, likedUsersHandler } from './handlers/chat';
 import { adminStatsHandler, adminBroadcastHandler, sendBroadcast, adminTargetedBroadcastHandler, sendTargetedBroadcast, adminManageCoinsHandler, manageCoins, adminReportsHandler, adminBanUser, adminUnbanUser, adminCampaignHandler, adminSettingsHandler } from './handlers/admin';
-import { mainKeyboard, adminKeyboard } from './utils/keyboards';
+import { mainKeyboard, adminKeyboard, walletKeyboard } from './utils/keyboards';
 import { t } from './utils/i18n';
 import { parseSearchFilters } from './utils/filters';
 import { UserService } from '../database/services/userService';
 import { MyContext, SessionData } from '../types/context';
+import { WalletService } from '../database/services/walletService';
+import { formatDateTime } from './utils/datetime';
 import { User } from '../database/models/User';
 import { Chat } from '../database/models/Chat';
 import { Report } from '../database/models/Report';
@@ -119,7 +121,10 @@ export async function startBot() {
   bot.hears(t.wallet, async (ctx) => {
     const user = await UserService.getById(ctx.from!.id);
     if (!user) return;
-    await ctx.reply(t.walletInfo(user.coins, user.totalCoinsEarned, user.totalCoinsSpent, user.isVip));
+    // دکمه‌های کیف پول (تاریخچه/خرید) ساخته شده بودند ولی هیچ‌وقت به پیام وصل نشدند
+    await ctx.reply(t.walletInfo(user.coins, user.totalCoinsEarned, user.totalCoinsSpent, user.isVip), {
+      reply_markup: walletKeyboard(),
+    });
   });
   bot.hears(t.referral, async (ctx) => {
     const link = await UserService.generateReferralLink(ctx.from!.id);
@@ -184,6 +189,33 @@ export async function startBot() {
   });
   bot.callbackQuery('block_user', blockUserHandler);
   bot.callbackQuery('liked_users', likedUsersHandler);
+
+  bot.callbackQuery('transaction_history', async (ctx) => {
+    const telegramId = ctx.from!.id;
+    const user = await UserService.getById(telegramId);
+    const history = await WalletService.getTransactionHistory(telegramId, 10);
+
+    if (history.length === 0) {
+      await ctx.reply(t.transactionHistoryEmpty);
+    } else {
+      const rows = history.map((tx) =>
+        t.transactionLine(tx.type, tx.amount, tx.description, formatDateTime(tx.createdAt))
+      );
+      await ctx.reply(t.walletHistory(rows, user?.coins ?? 0), { parse_mode: 'HTML' });
+    }
+    await ctx.answerCallbackQuery();
+  });
+
+  bot.callbackQuery('buy_coins', async (ctx) => {
+    // خرید آنلاین ساخته نشده و WalletService.purchaseCoins بدون هیچ پرداختی
+    // سکه اضافه می‌کند؛ تا وقتی درگاه پرداخت وصل نشده، دکمه فقط بسته‌ها را
+    // نشان می‌دهد و پول اضافه نمی‌کند
+    const rows = WalletService.coinPackages.map(
+      (pkg) => `• ${pkg.name} — ${pkg.coins} سکه — ${pkg.price}`
+    );
+    await ctx.reply(t.buyCoinsUnavailable(rows), { parse_mode: 'HTML' });
+    await ctx.answerCallbackQuery();
+  });
   bot.callbackQuery('confirm_report', async (ctx) => {
     await ctx.reply('🚨 لطفاً دلیل گزارش را انتخاب کنید.');
     await ctx.answerCallbackQuery();
