@@ -70,6 +70,15 @@ export function walletKeyboard() {
     .text(t.back, 'back_main');
 }
 
+export function coinPackagesKeyboard(packages: { id: string; name: string }[]) {
+  const keyboard = new InlineKeyboard();
+  packages.forEach((pkg, index) => {
+    keyboard.text(`💳 ${pkg.name}`, `buy_${pkg.id}`);
+    if (index % 2 === 1) keyboard.row();
+  });
+  return keyboard.text(t.back, 'back_main');
+}
+
 export function joinChannelsKeyboard(channels: string[]) {
   const keyboard = new InlineKeyboard();
   channels.forEach((channel, index) => {

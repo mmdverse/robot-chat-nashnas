@@ -64,6 +64,19 @@ export interface IChat {
   likes: number[];
 }
 
+export interface IPurchaseRequest {
+  _id: string;
+  userId: number;
+  packageId: string;
+  packageName: string;
+  coins: number;
+  price: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: Date;
+  reviewedBy?: number;
+  reviewedAt?: Date;
+}
+
 export interface IReport {
   _id: string;
   reporterId: number;

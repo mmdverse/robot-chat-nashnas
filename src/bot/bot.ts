@@ -6,7 +6,7 @@ import { startHandler } from './handlers/start';
 import { profileHandler, editProfileHandler, profileStates } from './handlers/profile';
 import { startChatHandler, endChatHandler, confirmEndChat, nextChatHandler, likeUserHandler, reportUserHandler, blockUserHandler, chatMessageHandler, likedUsersHandler } from './handlers/chat';
 import { adminStatsHandler, adminBroadcastHandler, sendBroadcast, adminTargetedBroadcastHandler, sendTargetedBroadcast, adminManageCoinsHandler, manageCoins, adminReportsHandler, adminBanUser, adminUnbanUser, adminCampaignHandler, adminSettingsHandler, adminAnalyticsHandler } from './handlers/admin';
-import { mainKeyboard, adminKeyboard, walletKeyboard, joinChannelsKeyboard } from './utils/keyboards';
+import { mainKeyboard, adminKeyboard, walletKeyboard, joinChannelsKeyboard, coinPackagesKeyboard } from './utils/keyboards';
 import { t } from './utils/i18n';
 import { parseSearchFilters } from './utils/filters';
 import { missingChannels, MEMBERSHIP_TTL_MS } from './utils/membership';
@@ -21,6 +21,7 @@ import { AdminLog } from '../database/models/AdminLog';
 import chalk from 'chalk';
 import cron from 'node-cron';
 import { AlertService } from '../database/services/alertService';
+import { PurchaseRequest } from '../database/models/PurchaseRequest';
 
 
 export async function startBot() {
@@ -104,6 +105,70 @@ export async function startBot() {
 
     await ctx.reply(`✅ گزارش ${reportId} بسته شد.`);
     await AdminLog.create({ adminId: telegramId, action: 'resolve_report', details: reportId });
+  });
+
+  bot.command('requests', async (ctx) => {
+    const telegramId = ctx.from!.id;
+    if (!config.admins.includes(telegramId)) return;
+
+    const pending = await WalletService.listPendingRequests();
+    if (pending.length === 0) {
+      await ctx.reply(t.adminNoPendingRequests);
+      return;
+    }
+
+    const rows = pending.map((r) =>
+      t.adminRequestLine(String(r._id), r.userId, `${r.packageName} (${r.coins} سکه)`, r.price)
+    );
+    await ctx.reply(t.adminPendingRequests(rows));
+  });
+
+  bot.command('approve', async (ctx) => {
+    const telegramId = ctx.from!.id;
+    if (!config.admins.includes(telegramId)) return;
+    const requestId = ctx.message?.text?.split(' ')[1]?.trim() || '';
+    if (!isValidObjectId(requestId)) {
+      await ctx.reply('❌ فرمت: /approve <id>');
+      return;
+    }
+
+    const request = await WalletService.reviewRequest(requestId, telegramId, true);
+    if (!request) {
+      await ctx.reply('❌ درخواستی با این شناسه در انتظار تایید نیست.');
+      return;
+    }
+
+    await ctx.reply(`✅ بستهٔ «${request.packageName}» برای کاربر ${request.userId} فعال شد.`);
+    await AdminLog.create({ adminId: telegramId, action: 'approve_purchase', details: requestId });
+    try {
+      await ctx.api.sendMessage(request.userId, t.purchaseApproved(request.packageName, request.coins));
+    } catch {
+      // کاربر ربات را بلاک کرده
+    }
+  });
+
+  bot.command('reject', async (ctx) => {
+    const telegramId = ctx.from!.id;
+    if (!config.admins.includes(telegramId)) return;
+    const requestId = ctx.message?.text?.split(' ')[1]?.trim() || '';
+    if (!isValidObjectId(requestId)) {
+      await ctx.reply('❌ فرمت: /reject <id>');
+      return;
+    }
+
+    const request = await WalletService.reviewRequest(requestId, telegramId, false);
+    if (!request) {
+      await ctx.reply('❌ درخواستی با این شناسه در انتظار تایید نیست.');
+      return;
+    }
+
+    await ctx.reply(`❌ درخواست کاربر ${request.userId} رد شد.`);
+    await AdminLog.create({ adminId: telegramId, action: 'reject_purchase', details: requestId });
+    try {
+      await ctx.api.sendMessage(request.userId, t.purchaseRejected(request.packageName));
+    } catch {
+      // کاربر ربات را بلاک کرده
+    }
   });
 
   // ===== TEXT HANDLERS =====
@@ -255,14 +320,47 @@ export async function startBot() {
   });
 
   bot.callbackQuery('buy_coins', async (ctx) => {
-    // خرید آنلاین ساخته نشده و WalletService.purchaseCoins بدون هیچ پرداختی
-    // سکه اضافه می‌کند؛ تا وقتی درگاه پرداخت وصل نشده، دکمه فقط بسته‌ها را
-    // نشان می‌دهد و پول اضافه نمی‌کند
-    const rows = WalletService.coinPackages.map(
-      (pkg) => `• ${pkg.name} — ${pkg.coins} سکه — ${pkg.price}`
+    const rows = WalletService.coinPackages.map((pkg) =>
+      t.packageLine(pkg.name, pkg.coins, pkg.price)
     );
-    await ctx.reply(t.buyCoinsUnavailable(rows), { parse_mode: 'HTML' });
+    await ctx.reply(t.buyCoins(rows), { reply_markup: coinPackagesKeyboard(WalletService.coinPackages) });
     await ctx.answerCallbackQuery();
+  });
+
+  // انتخاب بسته ⇒ درخواست در انتظار تایید. سکه‌ها فقط بعد از تایید ادمین
+  // اضافه می‌شوند، چون درگاه پرداخت وجود ندارد و تنها راه مطمئن، تایید دستی است.
+  bot.callbackQuery(/^buy_(.+)$/, async (ctx) => {
+    const telegramId = ctx.from!.id;
+    const packageId = ctx.match![1];
+    const pkg = WalletService.findPackage(packageId);
+    if (!pkg) {
+      await ctx.answerCallbackQuery({ text: '❌ این بسته وجود ندارد.' });
+      return;
+    }
+
+    const before = await PurchaseRequest.findOne({ userId: telegramId, status: 'pending' });
+    const request = await WalletService.createRequest(telegramId, packageId);
+    if (!request) {
+      await ctx.answerCallbackQuery({ text: '❌ خطا در ثبت درخواست.' });
+      return;
+    }
+    if (before) {
+      await ctx.answerCallbackQuery({ text: t.purchaseAlreadyPending, show_alert: true });
+      return;
+    }
+
+    await ctx.reply(t.purchaseRequested(pkg.name, pkg.coins, pkg.price));
+    await ctx.answerCallbackQuery();
+
+    // ادمین‌ها خبردار می‌شوند تا درخواست بی‌پاسخ نماند
+    const notice = t.adminRequestLine(String(request._id), telegramId, pkg.name, pkg.price);
+    for (const adminId of config.admins) {
+      try {
+        await ctx.api.sendMessage(adminId, `💳 درخواست خرید جدید\n\n${notice}`);
+      } catch {
+        // ادمینی که ربات را بلاک کرده
+      }
+    }
   });
   bot.callbackQuery('confirm_report', async (ctx) => {
     await ctx.reply('🚨 لطفاً دلیل گزارش را انتخاب کنید.');

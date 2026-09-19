@@ -55,6 +55,22 @@ ${!name || !gender || !age || !province ? '⚠️ لطفاً پروفایل خو
 • تکمیل پروفایل: +۳۰ سکه
 • چت روزانه: +۵ سکه`,
 
+  // Coin purchases
+  buyCoins: (rows: string[]) =>
+    `💳 بسته‌های سکه\n\n${rows.join('\n')}\n\nیک بسته را انتخاب کنید؛ درخواست برای تایید به مدیریت می‌رود.`,
+  packageLine: (name: string, coins: number, price: string) => `▫️ ${name} — ${coins} سکه — ${price}`,
+  purchaseRequested: (name: string, coins: number, price: string) =>
+    `✅ درخواست شما ثبت شد.\n\nبسته: ${name}\n${coins} سکه\n${price}\n\nبعد از تایید مدیریت، سکه‌ها به کیف پول شما اضافه می‌شود.`,
+  purchaseAlreadyPending: '⏳ یک درخواست خرید در انتظار تایید دارید. تا بررسی آن صبر کنید.',
+  purchaseApproved: (name: string, coins: number) =>
+    `🎉 خرید شما تایید شد!\n\n${coins} سکه از بستهٔ «${name}» به کیف پول شما اضافه شد.`,
+  purchaseRejected: (name: string) =>
+    `❌ درخواست خرید بستهٔ «${name}» تایید نشد. برای پیگیری به پشتیبانی پیام دهید.`,
+  adminNoPendingRequests: '💳 درخواست خریدی در انتظار تایید نیست.',
+  adminPendingRequests: (rows: string[]) => `💳 درخواست‌های خرید در انتظار:\n\n${rows.join('\n')}\n\nتایید: /approve <id> · رد: /reject <id>`,
+  adminRequestLine: (id: string, userId: number, name: string, price: string) =>
+    `• ${name} — کاربر ${userId} — ${price}\n   شناسه: ${id}`,
+
   // Admin alerts
   repeatOffenderAlert: (alerts: string[]) =>
     `⚡ هشدار خودکار\n\nاین کاربران به آستانهٔ گزارش رسیدند:\n\n${alerts.join('\n')}\n\nبرای بررسی: «🚨 گزارشات» · برای مسدود کردن: /ban <id>`,
@@ -92,8 +108,6 @@ ${!name || !gender || !age || !province ? '⚠️ لطفاً پروفایل خو
     const sign = amount > 0 ? '+' : '';
     return `${labels[type] || type}  ${sign}${amount} سکه\n   ${escapeHtml(description)} · ${date}`;
   },
-  buyCoinsUnavailable: (rows: string[]) =>
-    `💳 بسته‌های سکه\n\n${rows.join('\n')}\n\n⚠️ خرید آنلاین هنوز فعال نشده است؛ برای تهیهٔ سکه به پشتیبانی پیام دهید.`,
 
   // Referral
   referralInfo: (link: string, count: number) =>
