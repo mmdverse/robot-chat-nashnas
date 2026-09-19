@@ -30,9 +30,16 @@ export async function startChatHandler(ctx: MyContext, filters?: SearchFilters) 
     return;
   }
 
+  // پاداش روزانه با اولین چتِ هر روز
+  const dailyBonus = await UserService.claimDailyChatBonus(telegramId);
+
   // Set user as waiting
   await User.updateOne({ telegramId }, { chatStatus: 'waiting', isOnline: true });
   await ctx.reply(t.findingPartner, { parse_mode: 'HTML' });
+
+  if (dailyBonus > 0) {
+    await ctx.reply(`🎁 پاداش چت روزانه: ${dailyBonus} سکه!`);
+  }
 
   // Try to find a partner
   const partner = await UserService.searchForPartner(telegramId, filters);
