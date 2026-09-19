@@ -34,6 +34,13 @@ export async function startBot() {
     }) 
   }));
 
+  // هر تعامل آخرین فعالیت کاربر را ثبت می‌کند تا آمار آنلاین واقعی باشد
+  bot.use(async (ctx, next) => {
+    const telegramId = ctx.from?.id;
+    if (telegramId) await UserService.touchLastSeen(telegramId);
+    await next();
+  });
+
   // ===== COMMANDS =====
   bot.command('start', startHandler);
 

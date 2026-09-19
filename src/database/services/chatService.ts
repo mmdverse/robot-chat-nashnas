@@ -34,9 +34,11 @@ export class ChatService {
 
     // Reset both users
     for (const userId of chat.users) {
+      // پایان چت به معنی آفلاین شدن کاربر نیست؛ قبلاً هر دو طرف بعد از هر چت
+      // تا شروع بعدی «آفلاین» می‌ماندند
       await User.updateOne(
         { telegramId: userId },
-        { chatStatus: 'idle', currentPartner: null, isOnline: false }
+        { chatStatus: 'idle', currentPartner: null }
       );
       // Increment chat count
       await User.updateOne({ telegramId: userId }, { $inc: { chatCount: 1 } });
