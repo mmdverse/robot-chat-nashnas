@@ -7,6 +7,7 @@ import { startChatHandler, endChatHandler, confirmEndChat, nextChatHandler, like
 import { adminStatsHandler, adminBroadcastHandler, sendBroadcast, adminTargetedBroadcastHandler, sendTargetedBroadcast, adminManageCoinsHandler, manageCoins, adminReportsHandler, adminBanUser, adminUnbanUser, adminCampaignHandler, adminSettingsHandler } from './handlers/admin';
 import { mainKeyboard, adminKeyboard } from './utils/keyboards';
 import { t } from './utils/i18n';
+import { parseSearchFilters } from './utils/filters';
 import { UserService } from '../database/services/userService';
 import { MyContext, SessionData } from '../types/context';
 import { User } from '../database/models/User';
@@ -53,12 +54,14 @@ export async function startBot() {
   });
 
   // ===== TEXT HANDLERS =====
-  bot.hears(t.startChat, startChatHandler);
+  // startChatHandler پارامتر دوم فیلتر دارد و مستقیم بهعنوان middleware کار نمی‌کند
+  bot.hears(t.startChat, (ctx) => startChatHandler(ctx));
   bot.hears(t.advancedSearch, async (ctx) => {
     const user = await UserService.getById(ctx.from!.id);
     if (!user || !user.profile.isComplete) { await ctx.reply(t.profileIncomplete); return; }
     if (user.coins < config.coins.advancedSearchCost) { await ctx.reply(t.notEnoughCoins(config.coins.advancedSearchCost)); return; }
-    await UserService.spendCoins(user.telegramId, config.coins.advancedSearchCost, 'جستجوی پیشرفته');
+    // هزینه وقتی کم می‌شود که فیلترها وارد و جستجو اجرا شود، نه وقتی کاربر
+    // فقط منو را باز می‌کند و ممکن است هیچ‌وقت فیلتری نفرستد
     ctx.session.awaitingAdvancedSearch = true;
     await ctx.reply('🔍 جستجوی پیشرفته (هزینه: ۱۰ سکه)\n\nلطفاً فیلترها را وارد کنید:\n`gender=male, minAge=18, maxAge=30, province=تهران`');
   });
@@ -223,24 +226,27 @@ export async function startBot() {
 
     // User: Advanced search filters
     if (sessionData.awaitingAdvancedSearch) {
-      const text = ctx.message?.text || '';
-      // Parse filters from text (format: gender=male, minAge=18, ...)
-      const filters: any = {};
-      text.split(',').forEach(part => {
-        const [key, value] = part.trim().split('=');
-        if (key && value) {
-          if (key.trim() === 'minAge' || key.trim() === 'maxAge') filters[key.trim()] = parseInt(value);
-          else filters[key.trim()] = value;
-        }
-      });
-      const user = await UserService.searchForPartner(ctx.from!.id, filters);
-      if (user) {
-        await User.findOneAndUpdate({ telegramId: ctx.from!.id }, { chatStatus: 'waiting' });
-        await startChatHandler(ctx);
-      } else {
-        await ctx.reply('🔍 هم‌صحبتی با این فیلترها یافت نشد.');
-      }
       sessionData.awaitingAdvancedSearch = false;
+
+      const filters = parseSearchFilters(ctx.message?.text || '');
+      if (!filters) {
+        await ctx.reply('❌ فیلتر معتبری پیدا نشد. نمونه:\ngender=female, minAge=18, maxAge=30, province=تهران');
+        return;
+      }
+
+      const paid = await UserService.spendCoins(
+        ctx.from!.id,
+        config.coins.advancedSearchCost,
+        'جستجوی پیشرفته'
+      );
+      if (!paid) {
+        await ctx.reply(t.notEnoughCoins(config.coins.advancedSearchCost));
+        return;
+      }
+
+      // فیلترها به خودِ جستجو پاس می‌شوند؛ قبلاً هم‌صحبت همین‌جا پیدا و دور
+      // ریخته می‌شد و بعد startChatHandler بدون فیلتر دوباره جستجو می‌کرد
+      await startChatHandler(ctx, filters);
       return;
     }
 
