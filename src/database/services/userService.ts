@@ -4,7 +4,21 @@ import { config } from '../../config';
 import { IUser } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 
+// پنجرهٔ «آنلاین بودن» — هم برای آمار و هم برای شمارش استفاده می‌شود
+const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+
 export class UserService {
+  // آمار «آنلاین» بر پایهٔ lastSeen حساب می‌شود، ولی قبلاً lastSeen فقط در /start
+  // به‌روز می‌شد: کاربری که ساعت‌ها در ربات چت می‌کرد همچنان «آفلاین» به حساب
+  // می‌آمد. این متد در هر تعامل صدا زده می‌شود و برای اینکه هر پیام یک نوشتن
+  // دیتابیس نسازد، حداکثر هر دقیقه یک بار می‌نویسد.
+  static async touchLastSeen(telegramId: number): Promise<void> {
+    await User.updateOne(
+      { telegramId, lastSeen: { $lt: new Date(Date.now() - 60 * 1000) } },
+      { lastSeen: new Date(), isOnline: true }
+    );
+  }
+
   static async findOrCreate(telegramId: number, username?: string, firstName?: string, lastName?: string): Promise<IUser> {
     let user = await User.findOne({ telegramId });
     if (!user) {
@@ -137,7 +151,9 @@ export class UserService {
 
     const [total, online, chatting, waiting, banned, todayJoined, byGender, byProvince] = await Promise.all([
       User.countDocuments(),
-      User.countDocuments({ isOnline: true, lastSeen: { $gte: new Date(Date.now() - 5 * 60 * 1000) } }),
+      // پرچم isOnline فقط یک‌بار true می‌شد و بعد از پایان چت false می‌ماند؛
+      // پس ملاک، آخرین فعالیت کاربر است نه آن پرچم
+      User.countDocuments({ lastSeen: { $gte: new Date(Date.now() - ONLINE_WINDOW_MS) } }),
       User.countDocuments({ chatStatus: 'chatting' }),
       User.countDocuments({ chatStatus: 'waiting' }),
       User.countDocuments({ status: 'banned' }),
