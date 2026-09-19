@@ -45,19 +45,56 @@ export class ChatService {
     }
   }
 
-  static async likeUser(chatId: string, likerId: number): Promise<void> {
+  /**
+   * ثبت لایک. اگر طرف مقابل هم قبلاً لایک کرده باشد، هر دو در لیست
+   * connections هم قرار می‌گیرند تا بتوانند پیام مستقیم بفرستند.
+   * خروجی: آیا لایک متقابل شد؟
+   */
+  static async likeUser(chatId: string, likerId: number): Promise<boolean> {
     const chat = await Chat.findById(chatId);
-    if (!chat || !chat.isActive) return;
+    if (!chat || !chat.isActive) return false;
 
-    if (!chat.likes.includes(likerId)) {
-      chat.likes.push(likerId);
-      await chat.save();
-      await User.updateOne({ telegramId: likerId }, { $addToSet: { likedUsers: chat.users.find(u => u !== likerId) } });
-      await User.updateOne(
-        { telegramId: chat.users.find(u => u !== likerId) },
-        { $inc: { likeCount: 1 } }
-      );
+    const partnerId = chat.users.find((u) => u !== likerId);
+    if (!partnerId) return false;
+
+    if (chat.likes.includes(likerId)) {
+      // لایک تکراری؛ فقط اگر از قبل متقابل بوده دوباره اتصال نمی‌سازیم
+      return chat.likes.includes(partnerId);
     }
+
+    chat.likes.push(likerId);
+    await chat.save();
+    await User.updateOne({ telegramId: likerId }, { $addToSet: { likedUsers: partnerId } });
+    await User.updateOne({ telegramId: partnerId }, { $inc: { likeCount: 1 } });
+
+    const mutual = chat.likes.includes(partnerId);
+    if (mutual) {
+      await User.updateOne({ telegramId: likerId }, { $addToSet: { connections: partnerId } });
+      await User.updateOne({ telegramId: partnerId }, { $addToSet: { connections: likerId } });
+    }
+    return mutual;
+  }
+
+  /**
+   * کاربرانی که با این کاربر اتصال دوطرفه دارند.
+   * کسانی که خودمان بلاک کرده‌ایم و کسانی که ما را بلاک کرده‌اند، هر دو حذف
+   * می‌شوند؛ نشان دادن کسی که نمی‌خواهد پیام بگیرد بی‌معنی است.
+   */
+  static async listConnections(telegramId: number): Promise<number[]> {
+    const user = await User.findOne({ telegramId });
+    if (!user) return [];
+
+    const blocked = user.blockedUsers || [];
+    const candidates = (user.connections || []).filter((id) => !blocked.includes(id));
+    if (candidates.length === 0) return [];
+
+    const blockedUs = await User.find({
+      telegramId: { $in: candidates },
+      blockedUsers: telegramId,
+    }).select('telegramId').lean();
+    const excluded = new Set(blockedUs.map((u) => u.telegramId));
+
+    return candidates.filter((id) => !excluded.has(id));
   }
 
   static async getActiveChat(userId: number): Promise<IChat | null> {

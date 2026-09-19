@@ -6,7 +6,7 @@ import { startHandler } from './handlers/start';
 import { profileHandler, editProfileHandler, profileStates } from './handlers/profile';
 import { startChatHandler, endChatHandler, confirmEndChat, nextChatHandler, likeUserHandler, reportUserHandler, blockUserHandler, chatMessageHandler, likedUsersHandler } from './handlers/chat';
 import { adminStatsHandler, adminBroadcastHandler, sendBroadcast, adminTargetedBroadcastHandler, sendTargetedBroadcast, adminManageCoinsHandler, manageCoins, adminReportsHandler, adminBanUser, adminUnbanUser, adminCampaignHandler, adminSettingsHandler, adminAnalyticsHandler } from './handlers/admin';
-import { mainKeyboard, adminKeyboard, walletKeyboard, joinChannelsKeyboard, coinPackagesKeyboard } from './utils/keyboards';
+import { mainKeyboard, adminKeyboard, walletKeyboard, joinChannelsKeyboard, coinPackagesKeyboard, directModeKeyboard, replyKeyboard } from './utils/keyboards';
 import { t } from './utils/i18n';
 import { parseSearchFilters } from './utils/filters';
 import { missingChannels, MEMBERSHIP_TTL_MS } from './utils/membership';
@@ -21,6 +21,8 @@ import { AdminLog } from '../database/models/AdminLog';
 import chalk from 'chalk';
 import cron from 'node-cron';
 import { AlertService } from '../database/services/alertService';
+import { ChatService } from '../database/services/chatService';
+import { escapeHtml } from './utils/html';
 import { PurchaseRequest } from '../database/models/PurchaseRequest';
 
 
@@ -38,6 +40,7 @@ export async function startBot() {
       awaitingCoinManagement: false,
       awaitingAdvancedSearch: false,
       membershipCheckedAt: 0,
+      dmTarget: null,
     }) 
   }));
 
@@ -284,6 +287,29 @@ export async function startBot() {
   bot.callbackQuery('block_user', blockUserHandler);
   bot.callbackQuery('liked_users', likedUsersHandler);
 
+  // ورود به حالت پیام مستقیم با یک اتصال دوطرفه
+  bot.callbackQuery(/^dm_(\d+)$/, async (ctx) => {
+    const partnerId = Number(ctx.match![1]);
+    const connections = await ChatService.listConnections(ctx.from!.id);
+    if (!connections.includes(partnerId)) {
+      await ctx.answerCallbackQuery({ text: '❌ با این کاربر اتصال دوطرفه ندارید.' });
+      return;
+    }
+
+    const partner = await User.findOne({ telegramId: partnerId }).select('profile.name').lean();
+    ctx.session.dmTarget = partnerId;
+    await ctx.reply(t.directModeOn(escapeHtml(partner?.profile?.name || 'ناشناس')), {
+      reply_markup: directModeKeyboard(),
+    });
+    await ctx.answerCallbackQuery();
+  });
+
+  bot.callbackQuery('dm_exit', async (ctx) => {
+    ctx.session.dmTarget = null;
+    await ctx.editMessageText(t.directModeOff).catch(() => {});
+    await ctx.answerCallbackQuery();
+  });
+
   bot.callbackQuery('check_membership', async (ctx) => {
     const telegramId = ctx.from!.id;
     const missing = await missingChannels(ctx.api, telegramId, config.channels.required);
@@ -449,6 +475,34 @@ export async function startBot() {
       // فیلترها به خودِ جستجو پاس می‌شوند؛ قبلاً هم‌صحبت همین‌جا پیدا و دور
       // ریخته می‌شد و بعد startChatHandler بدون فیلتر دوباره جستجو می‌کرد
       await startChatHandler(ctx, filters);
+      return;
+    }
+
+    // پیام مستقیم به یک اتصال دوطرفه
+    const dmTarget = sessionData.dmTarget;
+    if (dmTarget) {
+      const sender = await User.findOne({ telegramId: ctx.from!.id }).select('profile.name').lean();
+      const senderName = escapeHtml(sender?.profile?.name || 'ناشناس');
+      const text = ctx.message?.text || '';
+
+      // فقط اگر مخاطب ما را بلاک نکرده باشد
+      const target = await User.findOne({ telegramId: dmTarget }).select('blockedUsers').lean();
+      if (target && (target.blockedUsers || []).includes(ctx.from!.id)) {
+        await ctx.reply('❌ این کاربر شما را مسدود کرده است.');
+        sessionData.dmTarget = null;
+        return;
+      }
+
+      try {
+        await ctx.api.sendMessage(
+          dmTarget,
+          `✉️ پیام مستقیم از ${senderName}:\n\n${text}`,
+          { parse_mode: 'HTML', reply_markup: replyKeyboard(ctx.from!.id) }
+        );
+        await ctx.reply(t.directSent(senderName));
+      } catch {
+        await ctx.reply('❌ پیام فرستاده نشد؛ شاید کاربر ربات را بلاک کرده است.');
+      }
       return;
     }
 

@@ -47,6 +47,8 @@ export interface IUser {
   currentPartner?: number;
   blockedUsers: number[];
   likedUsers: number[];
+  // کاربرانی که هر دو طرف همدیگر را لایک کرده‌اند؛ فقط با این‌ها پیام مستقیم ممکن است
+  connections: number[];
 
   // Settings
   notifyDirectMessage: boolean;

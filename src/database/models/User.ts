@@ -40,6 +40,7 @@ const UserSchema = new Schema<IUser>({
   currentPartner: { type: Number, default: undefined },
   blockedUsers: [{ type: Number }],
   likedUsers: [{ type: Number }],
+  connections: [{ type: Number }],
 
   notifyDirectMessage: { type: Boolean, default: true },
   autoNextEnabled: { type: Boolean, default: false },
