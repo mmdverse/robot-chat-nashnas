@@ -41,6 +41,7 @@ export interface IUser {
   vipExpiresAt?: Date;
   lastSeen: Date;
   joinedAt: Date;
+  lastDailyBonusAt?: Date;
 
   // Chat Partner
   currentPartner?: number;

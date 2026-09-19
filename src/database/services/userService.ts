@@ -84,6 +84,45 @@ export class UserService {
     return user;
   }
 
+  // راهنمای ربات و کیف پول هر دو وعده می‌دهند «چت روزانه: +۵ سکه»، ولی
+  // config.coins.dailyBonus هیچ‌جا استفاده نمی‌شد. این متد روزی یک بار (به وقت
+  // محلی سرور) پاداش می‌دهد. شرط و افزایش در یک کوئری‌اند تا دو پیام هم‌زمان
+  // نتوانند دو بار پاداش بگیرند. اگر امروز قبلاً گرفته شده باشد ۰ برمی‌گردد.
+  static async claimDailyChatBonus(telegramId: number): Promise<number> {
+    const bonus = config.coins.dailyBonus;
+    if (bonus <= 0) return 0;
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const user = await User.findOneAndUpdate(
+      {
+        telegramId,
+        $or: [
+          { lastDailyBonusAt: { $exists: false } },
+          { lastDailyBonusAt: { $lt: startOfDay } },
+        ],
+      },
+      {
+        lastDailyBonusAt: new Date(),
+        $inc: { coins: bonus, totalCoinsEarned: bonus },
+      },
+      { new: true }
+    );
+
+    if (!user) return 0;
+
+    await Transaction.create({
+      userId: telegramId,
+      type: 'bonus',
+      amount: bonus,
+      balance: user.coins,
+      description: 'پاداش چت روزانه',
+    });
+
+    return bonus;
+  }
+
   static async addCoins(telegramId: number, amount: number, description: string): Promise<IUser | null> {
     const user = await User.findOne({ telegramId });
     if (!user) return null;

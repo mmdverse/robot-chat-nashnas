@@ -35,6 +35,7 @@ const UserSchema = new Schema<IUser>({
   vipExpiresAt: { type: Date },
   lastSeen: { type: Date, default: Date.now },
   joinedAt: { type: Date, default: Date.now },
+  lastDailyBonusAt: { type: Date, default: undefined },
 
   currentPartner: { type: Number, default: undefined },
   blockedUsers: [{ type: Number }],
