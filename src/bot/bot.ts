@@ -21,6 +21,7 @@ import { AdminLog } from '../database/models/AdminLog';
 import chalk from 'chalk';
 import cron from 'node-cron';
 import { AlertService } from '../database/services/alertService';
+import { TextService } from '../database/services/textService';
 import { ChatService } from '../database/services/chatService';
 import { escapeHtml } from './utils/html';
 import { PurchaseRequest } from '../database/models/PurchaseRequest';
@@ -28,6 +29,13 @@ import { PurchaseRequest } from '../database/models/PurchaseRequest';
 
 export async function startBot() {
   await connectDatabase();
+
+  try {
+    const customized = await TextService.load();
+    if (customized > 0) console.log(chalk.green(`📝 ${customized} متن ویرایش‌شده بارگذاری شد`));
+  } catch (error) {
+    console.error(chalk.yellow('⚠️ بارگذاری متن‌های ویرایش‌شده ناموفق بود:'), error);
+  }
 
   const bot = new Bot<MyContext>(config.bot.token);
 
@@ -41,6 +49,7 @@ export async function startBot() {
       awaitingAdvancedSearch: false,
       membershipCheckedAt: 0,
       dmTarget: null,
+      awaitingTextEdit: null,
     }) 
   }));
 
@@ -108,6 +117,37 @@ export async function startBot() {
 
     await ctx.reply(`✅ گزارش ${reportId} بسته شد.`);
     await AdminLog.create({ adminId: telegramId, action: 'resolve_report', details: reportId });
+  });
+
+  bot.command('texts', async (ctx) => {
+    const telegramId = ctx.from!.id;
+    if (!config.admins.includes(telegramId)) return;
+    const rows = TextService.list().map((row) => t.textsListLine(row.key, row.value, row.customized));
+    await ctx.reply(t.textsList(rows));
+  });
+
+  bot.command('edit', async (ctx) => {
+    const telegramId = ctx.from!.id;
+    if (!config.admins.includes(telegramId)) return;
+    const key = ctx.message?.text?.split(' ')[1]?.trim() || '';
+    if (!TextService.isEditable(key)) {
+      await ctx.reply(t.textEditUnknown(key));
+      return;
+    }
+    ctx.session.awaitingTextEdit = key;
+    await ctx.reply(t.textEditPrompt(key));
+  });
+
+  bot.command('resettext', async (ctx) => {
+    const telegramId = ctx.from!.id;
+    if (!config.admins.includes(telegramId)) return;
+    const key = ctx.message?.text?.split(' ')[1]?.trim() || '';
+    if (!TextService.isEditable(key)) {
+      await ctx.reply(t.textEditUnknown(key));
+      return;
+    }
+    await TextService.reset(key);
+    await ctx.reply(t.textResetSaved(key));
   });
 
   bot.command('requests', async (ctx) => {
@@ -475,6 +515,28 @@ export async function startBot() {
       // فیلترها به خودِ جستجو پاس می‌شوند؛ قبلاً هم‌صحبت همین‌جا پیدا و دور
       // ریخته می‌شد و بعد startChatHandler بدون فیلتر دوباره جستجو می‌کرد
       await startChatHandler(ctx, filters);
+      return;
+    }
+
+    // ادمین: متن جدید برای یک کلید
+    if (sessionData.awaitingTextEdit) {
+      const key = sessionData.awaitingTextEdit;
+      const text = ctx.message?.text || '';
+      sessionData.awaitingTextEdit = null;
+
+      if (!config.admins.includes(ctx.from!.id)) return;
+      if (text === '/cancel') {
+        await ctx.reply(t.textEditCancelled);
+        return;
+      }
+      if (!text.trim()) {
+        await ctx.reply('❌ متن خالی ذخیره نمی‌شود.');
+        return;
+      }
+
+      await TextService.set(key as never, text, ctx.from!.id);
+      await AdminLog.create({ adminId: ctx.from!.id, action: 'edit_text', details: key });
+      await ctx.reply(t.textEditSaved(key));
       return;
     }
 
