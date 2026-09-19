@@ -55,6 +55,13 @@ ${!name || !gender || !age || !province ? '⚠️ لطفاً پروفایل خو
 • تکمیل پروفایل: +۳۰ سکه
 • چت روزانه: +۵ سکه`,
 
+  // Required channels
+  joinRequiredChannels: (channels: string) =>
+    `🔒 برای استفاده از ربات، اول عضو کانال‌های زیر شوید:\n\n${channels}\n\nبعد از عضویت دکمهٔ «✅ عضو شدم» را بزنید.`,
+  membershipStillMissing: (channels: string) =>
+    `❌ هنوز عضو این کانال‌ها نیستید:\n\n${channels}`,
+  membershipConfirmed: '✅ عضویت شما تایید شد. حالا می‌توانید از ربات استفاده کنید.',
+
   // Wallet — history and packages
   transactionHistoryEmpty: '📊 هنوز تراکنشی ثبت نشده است.',
   walletHistory: (rows: string[], balance: number) =>

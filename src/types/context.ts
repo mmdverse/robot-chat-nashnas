@@ -7,6 +7,8 @@ export interface SessionData {
   awaitingTargetedBroadcast: boolean;
   awaitingCoinManagement: boolean;
   awaitingAdvancedSearch: boolean;
+  // آخرین باری که عضویت کاربر در کانال‌های اجباری چک شده
+  membershipCheckedAt: number;
 }
 
 export type MyContext = Context & SessionFlavor<SessionData>;
