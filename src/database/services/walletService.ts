@@ -1,5 +1,6 @@
 import { User } from '../models/User';
 import { Transaction } from '../models/Transaction';
+import { PurchaseRequest } from '../models/PurchaseRequest';
 
 export class WalletService {
   static coinPackages = [
@@ -10,8 +11,19 @@ export class WalletService {
     { id: 'vip', name: 'VIP ماهانه', coins: 5000, price: '۲۵۰,۰۰۰ تومان', isVip: true },
   ];
 
-  static async purchaseCoins(userId: number, packageId: string): Promise<boolean> {
-    const pkg = this.coinPackages.find(p => p.id === packageId);
+  static findPackage(packageId: string) {
+    return this.coinPackages.find((p) => p.id === packageId);
+  }
+
+  /**
+   * دادن سکه‌های یک بسته به کاربر.
+   *
+   * این متد فقط باید از مسیر تایید ادمین صدا زده شود. متد قبلی (`purchaseCoins`)
+   * بدون هیچ پرداختی سکه اضافه می‌کرد و اگر به دکمهٔ خرید وصل می‌شد، هر کسی با
+   * یک کلیک بستهٔ VIP مجانی می‌گرفت؛ حذف شد تا اشتباهی وصل نشود.
+   */
+  static async grantPackage(userId: number, packageId: string): Promise<boolean> {
+    const pkg = this.findPackage(packageId);
     if (!pkg) return false;
 
     const user = await User.findOne({ telegramId: userId });
@@ -36,6 +48,40 @@ export class WalletService {
     });
 
     return true;
+  }
+
+  /** درخواست خرید در انتظار تایید (هر کاربر همزمان فقط یکی دارد) */
+  static async createRequest(userId: number, packageId: string) {
+    const pkg = this.findPackage(packageId);
+    if (!pkg) return null;
+
+    const existing = await PurchaseRequest.findOne({ userId, status: 'pending' });
+    if (existing) return existing;
+
+    return PurchaseRequest.create({
+      userId,
+      packageId: pkg.id,
+      packageName: pkg.name,
+      coins: pkg.coins,
+      price: pkg.price,
+    });
+  }
+
+  static async listPendingRequests(limit = 10) {
+    return PurchaseRequest.find({ status: 'pending' }).sort({ createdAt: 1 }).limit(limit);
+  }
+
+  /** تایید یا رد درخواست؛ اگر قبلاً بررسی شده باشد null برمی‌گردد */
+  static async reviewRequest(requestId: string, adminId: number, approve: boolean) {
+    const request = await PurchaseRequest.findOneAndUpdate(
+      { _id: requestId, status: 'pending' },
+      { status: approve ? 'approved' : 'rejected', reviewedBy: adminId, reviewedAt: new Date() },
+      { new: true }
+    );
+    if (!request) return null;
+
+    if (approve) await this.grantPackage(request.userId, request.packageId);
+    return request;
   }
 
   static async getTransactionHistory(userId: number, limit = 10): Promise<any[]> {
