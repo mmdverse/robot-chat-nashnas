@@ -1,4 +1,5 @@
 import { Bot, session } from 'grammy';
+import { isValidObjectId } from 'mongoose';
 import { config } from '../config';
 import { connectDatabase } from '../database/connection';
 import { startHandler } from './handlers/start';
@@ -43,14 +44,29 @@ export async function startBot() {
     const telegramId = ctx.from!.id;
     if (!config.admins.includes(telegramId)) return;
     const args = ctx.message?.text?.split(' ');
-    if (args && args.length >= 2) {
-      const reportId = args[1];
-      await Report.updateOne({ _id: reportId }, { resolved: true, resolvedBy: telegramId });
-      await ctx.reply(`✅ گزارش ${reportId} بسته شد.`);
-      await AdminLog.create({ adminId: telegramId, action: 'resolve_report', details: reportId });
-    } else {
+    const reportId = args && args.length >= 2 ? args[1].trim() : '';
+
+    if (!reportId) {
       await ctx.reply('❌ فرمت: /resolve reportId');
+      return;
     }
+    // یک آیدی نامعتبر قبلاً CastError می‌داد و ادمین فکر می‌کرد گزارش بسته شده
+    if (!isValidObjectId(reportId)) {
+      await ctx.reply('❌ آیدی گزارش نامعتبر است.');
+      return;
+    }
+
+    const result = await Report.updateOne(
+      { _id: reportId },
+      { resolved: true, resolvedBy: telegramId }
+    );
+    if (result.matchedCount === 0) {
+      await ctx.reply(`❌ گزارشی با آیدی ${reportId} پیدا نشد.`);
+      return;
+    }
+
+    await ctx.reply(`✅ گزارش ${reportId} بسته شد.`);
+    await AdminLog.create({ adminId: telegramId, action: 'resolve_report', details: reportId });
   });
 
   // ===== TEXT HANDLERS =====
