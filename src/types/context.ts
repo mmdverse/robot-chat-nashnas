@@ -9,6 +9,8 @@ export interface SessionData {
   awaitingAdvancedSearch: boolean;
   // آخرین باری که عضویت کاربر در کانال‌های اجباری چک شده
   membershipCheckedAt: number;
+  // شناسهٔ کاربری که در حالت پیام مستقیم با او حرف می‌زنیم
+  dmTarget: number | null;
 }
 
 export type MyContext = Context & SessionFlavor<SessionData>;

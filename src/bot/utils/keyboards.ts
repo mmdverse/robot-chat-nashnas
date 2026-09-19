@@ -70,6 +70,14 @@ export function walletKeyboard() {
     .text(t.back, 'back_main');
 }
 
+export function directModeKeyboard() {
+  return new InlineKeyboard().text('🔙 پایان پیام', 'dm_exit');
+}
+
+export function replyKeyboard(userId: number) {
+  return new InlineKeyboard().text('✉️ پاسخ', `dm_${userId}`);
+}
+
 export function coinPackagesKeyboard(packages: { id: string; name: string }[]) {
   const keyboard = new InlineKeyboard();
   packages.forEach((pkg, index) => {

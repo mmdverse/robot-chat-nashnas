@@ -1,10 +1,11 @@
+import { InlineKeyboard } from 'grammy';
 import { MyContext } from '../../types/context';
 import { UserService } from '../../database/services/userService';
 import { ChatService } from '../../database/services/chatService';
 import { User } from '../../database/models/User';
 import { Chat } from '../../database/models/Chat';
 import { Report } from '../../database/models/Report';
-import { chatKeyboard, endChatKeyboard, reportReasonKeyboard } from '../utils/keyboards';
+import { chatKeyboard, endChatKeyboard, reportReasonKeyboard, backKeyboard } from '../utils/keyboards';
 import { t } from '../utils/i18n';
 import { escapeHtml } from '../utils/html';
 import { SearchFilters } from '../utils/filters';
@@ -144,8 +145,21 @@ export async function likeUserHandler(ctx: MyContext) {
     await ctx.reply('چت فعالی وجود ندارد.');
     return;
   }
-  await ChatService.likeUser(chat._id.toString(), telegramId);
+  const mutual = await ChatService.likeUser(chat._id.toString(), telegramId);
   await ctx.reply('❤️ لایک ثبت شد!');
+
+  if (mutual) {
+    // هر دو طرف خبردار می‌شوند تا بدانند از این به بعد می‌توانند پیام بدهند
+    await ctx.reply(t.mutualLike);
+    const partnerId = chat.users.find(u => u !== telegramId);
+    if (partnerId) {
+      try {
+        await ctx.api.sendMessage(partnerId, t.mutualLike);
+      } catch {
+        // طرف مقابل ربات را بلاک کرده
+      }
+    }
+  }
 }
 
 // ===== Report =====
@@ -209,21 +223,31 @@ export async function likedUsersHandler(ctx: MyContext) {
   const user = await UserService.getById(telegramId);
   if (!user) return;
 
-  const likedIds = (user.likedUsers || []).slice(-10);
-  if (likedIds.length === 0) {
-    await ctx.reply(t.likedUsersEmpty);
+  // فقط اتصال‌های دوطرفه؛ پیام فرستادن یک‌طرفه ناشناسی را می‌شکند
+  const connectionIds = await ChatService.listConnections(telegramId);
+  if (connectionIds.length === 0) {
+    await ctx.reply(t.connectionsEmpty, { reply_markup: backKeyboard() });
     return;
   }
 
-  const liked = await User.find({ telegramId: { $in: likedIds } })
-    .select('profile.name profile.age profile.province')
+  const connections = await User.find({ telegramId: { $in: connectionIds } })
+    .select('telegramId profile.name profile.age profile.province')
     .lean();
 
-  const lines = liked.map((u, index) =>
+  const lines = connections.map((u, index) =>
     `${index + 1}. ${escapeHtml(u.profile?.name || 'ناشناس')} • ${u.profile?.age || '?'} ساله • ${escapeHtml(u.profile?.province || 'نامشخص')}`
   );
 
-  await ctx.reply(`${t.likedUsersTitle(liked.length)}\n\n${lines.join('\n')}\n\n${t.likedUsersNote}`, {
+  // هر کاربر یک دکمهٔ پیام دارد
+  const keyboard = new InlineKeyboard();
+  connections.forEach((u, index) => {
+    keyboard.text(`✉️ ${escapeHtml(u.profile?.name || 'ناشناس')}`, `dm_${u.telegramId}`);
+    if (index % 2 === 1) keyboard.row();
+  });
+  keyboard.row().text(t.back, 'back_main');
+
+  await ctx.reply(`${t.connectionsTitle(connections.length)}\n\n${lines.join('\n')}`, {
     parse_mode: 'HTML',
+    reply_markup: keyboard,
   });
 }
