@@ -55,6 +55,17 @@ ${!name || !gender || !age || !province ? '⚠️ لطفاً پروفایل خو
 • تکمیل پروفایل: +۳۰ سکه
 • چت روزانه: +۵ سکه`,
 
+  // Text management
+  textsList: (rows: string[]) =>
+    `📝 متن‌های قابل ویرایش:\n\n${rows.join('\n\n')}\n\nویرایش: /edit <key> · بازگشت به پیش‌فرض: /resettext <key>`,
+  textsListLine: (key: string, value: string, customized: boolean) =>
+    `${customized ? '✏️' : '🔹'} ${key}\n${value.slice(0, 120)}${value.length > 120 ? '…' : ''}`,
+  textEditPrompt: (key: string) => `📝 متن جدید برای «${key}» را بفرستید.`,
+  textEditSaved: (key: string) => `✅ متن «${key}» ذخیره شد.`,
+  textEditUnknown: (key: string) => `❌ کلید «${key}» قابل ویرایش نیست. فهرست: /texts`,
+  textResetSaved: (key: string) => `↩️ متن «${key}» به پیش‌فرض برگشت.`,
+  textEditCancelled: 'لغو شد.',
+
   // Connections (mutual likes)
   mutualLike: '💚 شما همدیگر را لایک کردید!\nاز این به بعد می‌توانید با «❤️ لایک‌شده‌ها» به هم پیام مستقیم بفرستید.',
   connectionsTitle: (count: number) => `💬 اتصال‌های شما (${count} نفر) — هر دو طرف همدیگر را لایک کرده‌اید:`,

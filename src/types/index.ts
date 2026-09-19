@@ -66,6 +66,14 @@ export interface IChat {
   likes: number[];
 }
 
+export interface IBotText {
+  _id: string;
+  key: string;
+  value: string;
+  updatedBy?: number;
+  updatedAt: Date;
+}
+
 export interface IPurchaseRequest {
   _id: string;
   userId: number;

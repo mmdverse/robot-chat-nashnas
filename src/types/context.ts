@@ -11,6 +11,8 @@ export interface SessionData {
   membershipCheckedAt: number;
   // شناسهٔ کاربری که در حالت پیام مستقیم با او حرف می‌زنیم
   dmTarget: number | null;
+  // کلید متنی که منتظر مقدار جدیدش هستیم
+  awaitingTextEdit: string | null;
 }
 
 export type MyContext = Context & SessionFlavor<SessionData>;
