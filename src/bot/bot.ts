@@ -22,6 +22,7 @@ import chalk from 'chalk';
 import cron from 'node-cron';
 import { AlertService } from '../database/services/alertService';
 import { TextService } from '../database/services/textService';
+import { tryRedisSessionStorage } from './utils/redisSession';
 import { ChatService } from '../database/services/chatService';
 import { escapeHtml } from './utils/html';
 import { PurchaseRequest } from '../database/models/PurchaseRequest';
@@ -39,8 +40,16 @@ export async function startBot() {
 
   const bot = new Bot<MyContext>(config.bot.token);
 
-  // Session
-  bot.use(session({ 
+  // Session — اگر REDIS_URL تنظیم شده و در دسترس باشد، نشست‌ها در Redis می‌مانند
+  const redis = await tryRedisSessionStorage(config.database.redisUrl);
+  if (redis.storage) {
+    console.log(chalk.green(`✅ نشست‌ها در Redis ذخیره می‌شوند (${config.database.redisUrl})`));
+  } else if (config.database.redisUrl) {
+    console.log(chalk.yellow('⚠️ Redis در دسترس نبود؛ نشست‌ها در حافظه می‌مانند'));
+  }
+
+  bot.use(session({
+    storage: redis.storage,
     initial: (): SessionData => ({ 
       awaitingProfileInput: null, 
       awaitingBroadcastMessage: false, 
