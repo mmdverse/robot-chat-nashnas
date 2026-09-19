@@ -39,7 +39,7 @@ export function chatKeyboard() {
     .row()
     .text(t.report, 'report_user')
     .text(t.blockUser, 'block_user')
-    .text(t.directMessage, 'direct_msg');
+    .text(t.likedUsers, 'liked_users');
 }
 
 export function reportReasonKeyboard(chatId: string) {
