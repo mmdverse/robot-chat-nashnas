@@ -1,5 +1,6 @@
 import { Keyboard, InlineKeyboard } from 'grammy';
 import { t } from './i18n';
+import { channelUrl } from './membership';
 
 export function mainKeyboard() {
   return new Keyboard()
@@ -66,6 +67,15 @@ export function walletKeyboard() {
     .text('📊 تاریخچه', 'transaction_history')
     .row()
     .text(t.back, 'back_main');
+}
+
+export function joinChannelsKeyboard(channels: string[]) {
+  const keyboard = new InlineKeyboard();
+  channels.forEach((channel, index) => {
+    keyboard.url(`📢 ${channel}`, channelUrl(channel));
+    if (index < channels.length - 1) keyboard.row();
+  });
+  return keyboard.row().text('✅ عضو شدم', 'check_membership');
 }
 
 export function backKeyboard() {

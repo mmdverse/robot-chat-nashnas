@@ -28,8 +28,4 @@ export async function startHandler(ctx: MyContext) {
       : mainKeyboard(),
   });
 
-  // Check required channels
-  if (config.channels.required.length > 0) {
-    // Will implement channel check middleware
-  }
 }

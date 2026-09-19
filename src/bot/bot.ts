@@ -6,9 +6,10 @@ import { startHandler } from './handlers/start';
 import { profileHandler, editProfileHandler, profileStates } from './handlers/profile';
 import { startChatHandler, endChatHandler, confirmEndChat, nextChatHandler, likeUserHandler, reportUserHandler, blockUserHandler, chatMessageHandler, likedUsersHandler } from './handlers/chat';
 import { adminStatsHandler, adminBroadcastHandler, sendBroadcast, adminTargetedBroadcastHandler, sendTargetedBroadcast, adminManageCoinsHandler, manageCoins, adminReportsHandler, adminBanUser, adminUnbanUser, adminCampaignHandler, adminSettingsHandler } from './handlers/admin';
-import { mainKeyboard, adminKeyboard, walletKeyboard } from './utils/keyboards';
+import { mainKeyboard, adminKeyboard, walletKeyboard, joinChannelsKeyboard } from './utils/keyboards';
 import { t } from './utils/i18n';
 import { parseSearchFilters } from './utils/filters';
+import { missingChannels, MEMBERSHIP_TTL_MS } from './utils/membership';
 import { UserService } from '../database/services/userService';
 import { MyContext, SessionData } from '../types/context';
 import { WalletService } from '../database/services/walletService';
@@ -33,6 +34,7 @@ export async function startBot() {
       awaitingTargetedBroadcast: false, 
       awaitingCoinManagement: false,
       awaitingAdvancedSearch: false,
+      membershipCheckedAt: 0,
     }) 
   }));
 
@@ -41,6 +43,30 @@ export async function startBot() {
     const telegramId = ctx.from?.id;
     if (telegramId) await UserService.touchLastSeen(telegramId);
     await next();
+  });
+
+  // عضویت اجباری کانال‌ها — REQUIRED_CHANNELS قبلاً فقط خوانده می‌شد و هیچ
+  // بررسی‌ای انجام نمی‌شد. نتیجهٔ بررسی در نشست کش می‌شود تا هر پیام یک درخواست
+  // به API تلگرام نزند.
+  bot.use(async (ctx, next) => {
+    const telegramId = ctx.from?.id;
+    if (!telegramId || config.channels.required.length === 0) return next();
+    if (config.admins.includes(telegramId)) return next();
+
+    const now = Date.now();
+    if (now - ctx.session.membershipCheckedAt < MEMBERSHIP_TTL_MS) return next();
+
+    const missing = await missingChannels(ctx.api, telegramId, config.channels.required);
+    ctx.session.membershipCheckedAt = now;
+    if (missing.length === 0) return next();
+
+    const list = missing.map((channel) => `• ${channel}`).join('\n');
+    await ctx.reply(t.joinRequiredChannels(list), {
+      reply_markup: joinChannelsKeyboard(missing),
+      link_preview_options: { is_disabled: true },
+    });
+    if (ctx.callbackQuery) await ctx.answerCallbackQuery().catch(() => {});
+    return;
   });
 
   // ===== COMMANDS =====
@@ -189,6 +215,25 @@ export async function startBot() {
   });
   bot.callbackQuery('block_user', blockUserHandler);
   bot.callbackQuery('liked_users', likedUsersHandler);
+
+  bot.callbackQuery('check_membership', async (ctx) => {
+    const telegramId = ctx.from!.id;
+    const missing = await missingChannels(ctx.api, telegramId, config.channels.required);
+    ctx.session.membershipCheckedAt = Date.now();
+
+    if (missing.length === 0) {
+      await ctx.answerCallbackQuery({ text: t.membershipConfirmed, show_alert: true });
+      await ctx.reply(t.welcome, {
+        parse_mode: 'HTML',
+        reply_markup: config.admins.includes(telegramId) ? adminKeyboard() : mainKeyboard(),
+      });
+    } else {
+      await ctx.answerCallbackQuery({
+        text: t.membershipStillMissing(missing.join('، ')),
+        show_alert: true,
+      });
+    }
+  });
 
   bot.callbackQuery('transaction_history', async (ctx) => {
     const telegramId = ctx.from!.id;
