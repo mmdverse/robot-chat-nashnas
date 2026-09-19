@@ -14,30 +14,43 @@
 ### 👤 User Features
 | Feature | Description |
 |---------|-------------|
-| 🎲 **Random Chat** | Connect with random陌生人 anonymously |
+| 🎲 **Random Chat** | Connect with random strangers anonymously |
 | 🔍 **Advanced Search** | Filter by gender, age, province (costs coins) |
 | 📡 **Radar** | Find nearby users in your province |
 | 👤 **Profile System** | Name, gender, age, province, city |
-| 💰 **Coin Economy** | Earn, spend, and purchase coins |
+| 💰 **Coin Economy** | Earn coins from the daily chat bonus, profile completion and referrals |
 | 📨 **Referral System** | Invite friends and earn bonuses |
 | ❤️ **Like System** | Like chat partners |
-| 🔇 **Block & Report** | Report inappropriate users |
-| 📝 **Direct Messages** | Message past chat partners |
-| 🗑️ **Delete Messages** | Delete messages for both sides |
+| 🔇 **Block & Report** | Block a user, or report them for harassment, spam, a fake profile or inappropriate content |
+| 👥 **Liked Users** | Review the profiles you liked during chats |
 
 ### ⚙️ Admin Panel
 | Feature | Description |
 |---------|-------------|
-| 📊 **Real-time Stats** | Total users, online, chatting, waiting, banned |
-| 📣 **Broadcast** | Send messages to all or targeted users |
+| 📊 **Stats** | Users, online, chatting, waiting, banned, by gender and top provinces |
+| 📣 **Broadcast** | Send a message to every active user |
+| 🎯 **Targeted Broadcast** | Filter recipients by gender, age, province or coin balance |
 | 💰 **Coin Management** | Adjust user coins manually |
-| 🚨 **Report System** | Handle user reports |
-| 📢 **Campaigns** | Create targeted ad campaigns |
-| 📈 **Analytics** | Hourly/daily activity charts |
-| 🗺️ **User Map** | Province distribution |
-| ⚡ **Smart Alerts** | Auto-notify admins of anomalies |
-| 🔒 **Required Channels** | Force users to join channels |
-| 📝 **Text Management** | Edit bot messages |
+| 🚨 **Report System** | List open reports and resolve them with `/resolve` |
+| 📢 **Campaigns** | List campaigns with their send, view and entry counts |
+| 🚫 **Ban / Unban** | Ban or unban a user with `/ban` and `/unban` |
+| ⚙️ **Settings** | Overview of the bot settings |
+
+### 🚧 Not implemented yet
+
+Listed here so nobody plans around them — these are read from config or mentioned
+in older docs, but no code path uses them:
+
+- **Buying coins** — the packages and prices exist, but there is no payment
+  integration, so the buy button only lists them.
+- **Direct messages to past partners** — you cannot message someone after a chat
+  ends; the button shows your liked users instead.
+- **Required channels** — `REQUIRED_CHANNELS` is read from the environment but no
+  join-check middleware runs.
+- **Analytics charts** — the hourly and daily aggregation helpers exist but
+  nothing calls them; statistics are shown as text.
+- **Redis** — `ioredis` is installed and `REDIS_URL` is read, but nothing imports
+  it. MongoDB is the only store in use.
 
 ---
 
@@ -50,7 +63,6 @@
 | **grammY** | Telegram Bot Framework |
 | **MongoDB** | Database |
 | **Mongoose** | MongoDB ODM |
-| **Redis** | Caching (optional) |
 
 ---
 
@@ -121,8 +133,10 @@ src/
 | `🎯 ارسال هدفمند` | Targeted broadcast |
 | `💰 مدیریت سکه` | Manage coins |
 | `🚨 گزارشات` | View reports |
-| `📢 کمپین‌ها` | Manage campaigns |
+| `📢 کمپین‌ها` | List campaigns |
 | `⚙️ تنظیمات` | Bot settings |
+| `/ban` · `/unban` | Ban or unban a user by id |
+| `/resolve <id>` | Close a report |
 
 ---
 

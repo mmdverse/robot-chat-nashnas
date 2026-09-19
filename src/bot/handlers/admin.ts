@@ -230,7 +230,10 @@ export async function adminCampaignHandler(ctx: MyContext) {
     }
   }
 
-  msg += 'برای ساخت کمپین جدید:\n/campaign_new title | message | gender | minAge-maxAge | province';
+  // قبلاً اینجا به دستور /campaign_new ارجاع می‌داد که هیچ‌جا ثبت نشده و وجود ندارد
+  if (campaigns.length > 0) {
+    msg += 'ساخت کمپین جدید هنوز پیاده نشده است.';
+  }
 
   await ctx.reply(msg);
 }
