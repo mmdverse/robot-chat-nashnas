@@ -55,6 +55,12 @@ ${!name || !gender || !age || !province ? '⚠️ لطفاً پروفایل خو
 • تکمیل پروفایل: +۳۰ سکه
 • چت روزانه: +۵ سکه`,
 
+  // Admin alerts
+  repeatOffenderAlert: (alerts: string[]) =>
+    `⚡ هشدار خودکار\n\nاین کاربران به آستانهٔ گزارش رسیدند:\n\n${alerts.join('\n')}\n\nبرای بررسی: «🚨 گزارشات» · برای مسدود کردن: /ban <id>`,
+  repeatOffenderLine: (name: string, id: number, count: number) =>
+    `• ${escapeHtml(name)} (شناسه ${id}) — ${count} گزارش باز`,
+
   // Analytics
   analytics: '📈 نمودار فعالیت',
   analyticsHourly: (rows: string[], max: number) =>
