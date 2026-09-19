@@ -3,6 +3,14 @@
 // پین‌شده‌اش هم روی npm وجود ندارد).
 const TEHRAN_TZ = 'Asia/Tehran';
 
+/** فقط تاریخ شمسی، بدون ساعت (برای محورهای نمودار) */
+export function formatDate(date: Date | string | undefined): string {
+  if (!date) return '-';
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleString('fa-IR', { timeZone: TEHRAN_TZ, dateStyle: 'short' });
+}
+
 export function formatDateTime(date: Date | string | undefined): string {
   if (!date) return '-';
   const d = typeof date === 'string' ? new Date(date) : date;

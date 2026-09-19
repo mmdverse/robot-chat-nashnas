@@ -5,7 +5,9 @@ import { Report } from '../../database/models/Report';
 import { AdminLog } from '../../database/models/AdminLog';
 import { User } from '../../database/models/User';
 import { Campaign } from '../../database/models/Campaign';
-import { adminKeyboard } from '../utils/keyboards';
+import { adminKeyboard, backKeyboard } from '../utils/keyboards';
+import { chartLine, fillMissing } from '../utils/chart';
+import { formatDate } from '../utils/datetime';
 import { t } from '../utils/i18n';
 import { config } from '../../config';
 
@@ -26,6 +28,60 @@ export async function adminStatsHandler(ctx: MyContext) {
     `  • میانگین مدت: ${chatStats.avgDuration} دقیقه`;
 
   await ctx.reply(msg, { parse_mode: 'HTML' });
+}
+
+// ===== Activity charts =====
+export async function adminAnalyticsHandler(ctx: MyContext) {
+  const telegramId = ctx.from?.id!;
+  if (!config.admins.includes(telegramId)) return;
+
+  const [hourlyRaw, dailyRaw] = await Promise.all([
+    ChatService.getHourlyActivity(),
+    ChatService.getDailyActivity(),
+  ]);
+
+  if (hourlyRaw.length === 0 && dailyRaw.length === 0) {
+    await ctx.reply(t.analyticsEmpty, { reply_markup: backKeyboard() });
+    return;
+  }
+
+  // ساعت‌هایی که چتی نداشته‌اند صفر می‌شوند تا نمودار پیوسته باشد
+  const nowHour = new Date().getHours();
+  const hourKeys = Array.from({ length: 24 }, (_, i) => (nowHour - 23 + i + 24) % 24);
+  const hourly = fillMissing(
+    hourlyRaw as { hour: number; count: number }[],
+    hourKeys.map(String),
+    (row) => String(row.hour),
+    (key) => ({ hour: Number(key), count: 0 })
+  ).sort((a, b) => hourKeys.indexOf(a.hour) - hourKeys.indexOf(b.hour));
+
+  const hourlyMax = Math.max(...hourly.map((h) => h.count), 1);
+  const hourlyRows = hourly.map((h) => chartLine(String(h.hour).padStart(2, '0'), h.count, hourlyMax));
+
+  // ۱۴ روز گذشته، روزهای بی‌چت صفر
+  const dayKeys: string[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+    dayKeys.push(d.toISOString().slice(0, 10));
+  }
+  const daily = fillMissing(
+    dailyRaw as { day: string; count: number }[],
+    dayKeys,
+    (row) => row.day,
+    (key) => ({ day: key, count: 0 })
+  );
+  const dailyMax = Math.max(...daily.map((d) => d.count), 1);
+  // برچسب روز به شمسی، فقط روز و ماه
+  const dailyRows = daily.map((d) => {
+    const label = formatDate(new Date(`${d.day}T12:00:00Z`));
+    return chartLine(label.padStart(9), d.count, dailyMax);
+  });
+  const dailyTotal = daily.reduce((sum, d) => sum + d.count, 0);
+
+  await ctx.reply(
+    `${t.analyticsHourly(hourlyRows, hourlyMax)}\n\n${t.analyticsDaily(dailyRows, dailyTotal)}`,
+    { reply_markup: backKeyboard() }
+  );
 }
 
 // ===== Broadcast =====

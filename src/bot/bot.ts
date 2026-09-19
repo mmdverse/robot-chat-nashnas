@@ -5,7 +5,7 @@ import { connectDatabase } from '../database/connection';
 import { startHandler } from './handlers/start';
 import { profileHandler, editProfileHandler, profileStates } from './handlers/profile';
 import { startChatHandler, endChatHandler, confirmEndChat, nextChatHandler, likeUserHandler, reportUserHandler, blockUserHandler, chatMessageHandler, likedUsersHandler } from './handlers/chat';
-import { adminStatsHandler, adminBroadcastHandler, sendBroadcast, adminTargetedBroadcastHandler, sendTargetedBroadcast, adminManageCoinsHandler, manageCoins, adminReportsHandler, adminBanUser, adminUnbanUser, adminCampaignHandler, adminSettingsHandler } from './handlers/admin';
+import { adminStatsHandler, adminBroadcastHandler, sendBroadcast, adminTargetedBroadcastHandler, sendTargetedBroadcast, adminManageCoinsHandler, manageCoins, adminReportsHandler, adminBanUser, adminUnbanUser, adminCampaignHandler, adminSettingsHandler, adminAnalyticsHandler } from './handlers/admin';
 import { mainKeyboard, adminKeyboard, walletKeyboard, joinChannelsKeyboard } from './utils/keyboards';
 import { t } from './utils/i18n';
 import { parseSearchFilters } from './utils/filters';
@@ -167,6 +167,7 @@ export async function startBot() {
     await ctx.reply(t.adminMenu, { reply_markup: adminKeyboard() });
   });
   bot.hears(t.stats, adminStatsHandler);
+  bot.hears(t.analytics, adminAnalyticsHandler);
   bot.hears(t.broadcast, adminBroadcastHandler);
   bot.hears(t.targetedBroadcast, adminTargetedBroadcastHandler);
   bot.hears(t.manageCoins, adminManageCoinsHandler);
