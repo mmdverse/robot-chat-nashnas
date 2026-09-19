@@ -1,3 +1,5 @@
+import { escapeHtml } from './html';
+
 // Persian translations for the bot
 export const t = {
   welcome: `🌟 به ربات چت ناشناس خوش آمدید!
@@ -147,7 +149,7 @@ ${link}
 ❓ نامشخص: ${s.byGender.unknown}
 
 📍 استان‌های برتر:
-${Object.entries(s.byProvince).slice(0, 5).map(([p, c]) => `  • ${p}: ${c} نفر`).join('\n')}`,
+${Object.entries(s.byProvince).slice(0, 5).map(([p, c]) => `  • ${escapeHtml(String(p))}: ${c} نفر`).join('\n')}`,
 
   noChatPartner: '😔 هم‌صحبتی یافت نشد. لطفاً بعداً تلاش کنید.',
   profileIncomplete: '⚠️ لطفاً ابتدا پروفایل خود را تکمیل کنید.',
