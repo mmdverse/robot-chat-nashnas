@@ -6,6 +6,7 @@ import { Chat } from '../../database/models/Chat';
 import { Report } from '../../database/models/Report';
 import { chatKeyboard, endChatKeyboard, reportReasonKeyboard } from '../utils/keyboards';
 import { t } from '../utils/i18n';
+import { escapeHtml } from '../utils/html';
 import { config } from '../../config';
 
 // ===== Start Random Chat =====
@@ -30,9 +31,9 @@ export async function startChatHandler(ctx: MyContext) {
 
     await ctx.reply(
       t.partnerFound(
-        partner.profile.name || 'ناشناس',
+        escapeHtml(partner.profile.name),
         partner.profile.age || 0,
-        partner.profile.province || 'ایران'
+        escapeHtml(partner.profile.province)
       ),
       { reply_markup: chatKeyboard(), parse_mode: 'HTML' }
     );
@@ -41,9 +42,9 @@ export async function startChatHandler(ctx: MyContext) {
       await ctx.api.sendMessage(
         partner.telegramId,
         t.partnerFound(
-          user.profile.name || 'ناشناس',
+          escapeHtml(user.profile.name),
           user.profile.age || 0,
-          user.profile.province || 'ایران'
+          escapeHtml(user.profile.province)
         ),
         { reply_markup: chatKeyboard(), parse_mode: 'HTML' } as any
       );
@@ -154,7 +155,9 @@ export async function chatMessageHandler(ctx: MyContext) {
   if (!text || text.startsWith('/')) return;
 
   try {
-    await ctx.api.sendMessage(partnerId, text, { parse_mode: 'HTML' } as any);
+    // بدون parse_mode می‌فرستیم؛ وگرنه یک < ساده در متن باعث خطای ۴۰۰ تلگرام
+    // می‌شود، پیام نمی‌رسد و هم‌صحبت اشتباهی قطع می‌شود.
+    await ctx.api.sendMessage(partnerId, text);
     await Chat.updateOne({ _id: chat._id }, { $inc: { messagesCount: 1 } });
   } catch {
     await ctx.reply('❌ هم‌صحبت شما قادر به دریافت پیام نیست.');

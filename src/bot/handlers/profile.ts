@@ -2,6 +2,7 @@ import { MyContext } from '../../types/context';
 import { UserService } from '../../database/services/userService';
 import { profileKeyboard, genderKeyboard } from '../utils/keyboards';
 import { t } from '../utils/i18n';
+import { escapeHtml } from '../utils/html';
 
 export async function profileHandler(ctx: MyContext) {
   const telegramId = ctx.from?.id!;
@@ -10,11 +11,11 @@ export async function profileHandler(ctx: MyContext) {
 
   await ctx.reply(
     t.profileInfo(
-      user.profile.name,
+      escapeHtml(user.profile.name),
       user.profile.gender,
       user.profile.age,
-      user.profile.province,
-      user.profile.city,
+      escapeHtml(user.profile.province),
+      escapeHtml(user.profile.city),
       user.coins
     ),
     { reply_markup: profileKeyboard(), parse_mode: 'HTML' }
